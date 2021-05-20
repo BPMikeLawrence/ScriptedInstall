@@ -1,9 +1,8 @@
 ﻿########################################################################################################
 # Scripted Install 
-# v 0.1
+#
 # Mike Lawrence, Blue Prism Professional Services EMEA
 # (mike.lawrence@blueprism.com)
-#
 #
 # Only attempt with:
 #    Decipher 1.2+
@@ -15,8 +14,7 @@
 # Newest version is always available here:
 # https://raw.githubusercontent.com/BPMikeLawrence/ScriptedInstall/main/ScriptedInstall.ps1
 # 
-#
-# Points of note for technical architects \ tech specialist are displayed in Magenta
+# v 0.1 - Alpha Version!
 
 $DecipherVersion = "1.2"
 $InteractVersion = "4.3"
@@ -193,11 +191,11 @@ function StartupQuestions
     if ($Global:QPQ -ne "D")
         {
         $Global:QRMQCerts = InputQuestion "Create a Self-Signed Certificate?" "Y"
-        }
-    if ($Global:QRMQCerts -eq "Y")
-        {
-        $Global:QHostSuffix = InputQuestion "Choose a suffix for your web sites \ applications " ".local"
-        $Global:QCertFriendlyName = InputQuestion "Choose a Friendly Name for you Certificate" "MyBPCertificate"
+        if ($Global:QRMQCerts -eq "Y")
+            {
+            $Global:QHostSuffix = InputQuestion "Choose a suffix for your web sites \ applications " ".local"
+            $Global:QCertFriendlyName = InputQuestion "Choose a Friendly Name for you Certificate" "MyBPCertificate"
+            }
         }
     }
 
@@ -595,13 +593,13 @@ function InteractWindowsAuthChanges ($WAUser, $WAPassword)
         $ServiceC.Change($null,$null,$null,$null,$null,$null,$WAUser,$WAPassword,$null,$null,$null)
     	}
 
-    WriteandLog "Setting Application Pool Identity to $WAUserX" Yellow
+    WriteandLog "Setting Application Pool Identity to $WAUser" Yellow
     Import-Module WebAdministration
     $pools = Get-ChildItem IIS:\AppPools | where { $_.name -Like  "Blue Prism - *"}
     foreach ($pool in $pools)
     	{
     	$pool.processmodel.identityType = 3
-    	$pool.processmodel.username = $WAUserX
+    	$pool.processmodel.username = $WAUser
     	$pool.processmodel.password = $WAPassword
 	    $pool | Set-Item
 	    }
