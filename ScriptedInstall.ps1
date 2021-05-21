@@ -15,6 +15,9 @@
 # https://raw.githubusercontent.com/BPMikeLawrence/ScriptedInstall/main/ScriptedInstall.ps1
 # 
 # v 0.1 - Alpha Version!
+# v 0.2 - Based on customer experience, changed hub\interact msi names, corrected file check, tested temp directory with spaces, made interact services restart cos i forgot to do that, downloaded files are now checked for post-download
+#
+# To do: 
 
 $DecipherVersion = "1.2"
 $InteractVersion = "4.3"
@@ -61,17 +64,17 @@ $RMQInstallMarker = "RabbitMQ Server 3.8.5"
 $ErlangHome = "C:\Program Files\erl-23.0.1"
 $RMQsbin = "C:\Program Files\RabbitMQ Server\rabbitmq_server-3.8.5\sbin"
 
-$HubInstallFile = "Blue Prism Hub.msi"
+$HubInstallFile = "BluePrismHub-4.3.msi"
 $HubInstallMarker = "Blue Prism Hub"
 
-$InteractInstallFile = "Blue Prism Interact.msi"
+$InteractInstallFile = "BluePrismInteract-4.3.msi"
 $InteractInstallMarker = "Blue Prism Interact"
 
 $InteractPermsFolders = "C:\Program Files (x86)\Blue Prism"
 
 $bpccerts = "BluePrismCloud_Data_Protection", "BluePrismCloud_IMS_JWT"
 
-$DecipherFilesarray = $HubInstallFile, $InteractInstallFile
+$InteractFilesarray = $HubInstallFile, $InteractInstallFile
 
 $DecipherServerInstallFile = "Decipher Server 1.221.03230.msi"
 $DecipherServerInstallMarker = "Decipher Server"
@@ -132,15 +135,16 @@ function StartupQuestions
         
     #$Global:QPQ = ProductQuestion "Are you installing Interact (I), Decipher (D) or Blue Prism V7 (B)?"
     $Global:QPQ = ProductQuestion "Are you installing Interact (I), Decipher (D) (Blue Prism V7 coming soon)?"
-
+    
+      
 # Check Interact install files exist, before we start    
-    if ($Global:QPQ -eq "D")
+    if ($Global:QPQ -eq "I")
         {
-        foreach ($File in $InteractDecipherFilesarray)
+        foreach ($File in $InteractFilesarray)
         	{
             if (-not (Test-Path -Path "$Global:DownloadDir\$File" -PathType Leaf))
                 {
-                WriteandLog "Unable to find install file, $File. Please download and place in $Global:DownloadDir before retrying" White
+                WriteandLog "Unable to find install file, $File. Please download and place in $Global:DownloadDir before retrying" Red
                 exit
 	            } 
             }
@@ -153,7 +157,7 @@ function StartupQuestions
         	{
             if (-not (Test-Path -Path "$Global:DownloadDir\$File" -PathType Leaf))
                 {
-                WriteandLog "Unable to find install file, $File. Please download and place in $Global:DownloadDir before retrying"
+                WriteandLog "Unable to find install file, $File. Please download and place in $Global:DownloadDir before retrying" Red
                 exit
 	            } 
             }
@@ -181,7 +185,7 @@ function StartupQuestions
             }
         }
     
-    $Global:QWA = InputQuestion "Do you want use Windows Authentication?" "Y"
+    $Global:QWA = InputQuestion "Do you want use Windows Authentication? (The alterntive being everything running under the local system account)" "Y"
     if ($Global:QWA -eq "Y")
         {
         DefineWACreds
@@ -278,7 +282,7 @@ function CheckInstalled ($Software)
         WriteandLog "$Software is not installed" Yellow
         }
     }
-    
+
 
 function CheckAndDownload($file, $url, $Global:DownloadDir)
     {
@@ -286,6 +290,11 @@ function CheckAndDownload($file, $url, $Global:DownloadDir)
         {
         WriteandLog "Downloading $file" White
         wget $url -outfile $Global:DownloadDir\$file
+        if (-not (Test-Path -Path "$Global:DownloadDir\$file" -PathType Leaf))
+            {
+            WriteandLog "Unable to download $file. Do you have access to the Internet?" Red
+            exit
+            }
         }
         else
         {
@@ -536,7 +545,7 @@ function InteractShortcuts
     #CreateShortcut $SourceFileLocation $ShortcutName $ShortcutArguments 
     CreateShortcut "$env:SystemRoot\System32\inetsrv\InetMgr.exe" "IIS Manager.lnk"
     CreateShortcut "$env:SystemRoot\System32\services.msc" "Services.lnk"
-    CreateShortcut "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" "Decipher.lnk" "http://localhost:80"
+    CreateShortcut "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" "Interact.lnk" "https://authentication"
 
     CreateShortcut "C:\Program Files (x86)\Blue Prism\Audit Service\Logs_Audit" "Audit Service Logs.lnk"
     CreateShortcut "C:\Program Files (x86)\Blue Prism\Audit Service Listener\Logs_AuditQueueListener" "Audit Service Listener Logs.lnk"
@@ -704,6 +713,13 @@ function InteractPostInstallRestart
     WriteandLog "Restarting IIS" Yellow
     & {iisreset}
 
+    WriteandLog "Starting all Services" Yellow
+    foreach ($service in $InteractServices)
+    	{
+        echo $service
+        Start-Service -Name $service 
+    	}
+
     }
 
 
@@ -830,6 +846,8 @@ if ($input -ne "Y")
     }
 
 
+# Decipher Install procedure
+
 if ($QPQ -match "D")
     {
     WriteandLog "Starting Decipher $DecipherVersion install" Green
@@ -910,7 +928,7 @@ if ($QPQ -match "D")
 
     if ($Global:QWA -match "y")
         {
-        $ReadytoWA = InputQuestion "Is Windows Authentication ready to be configured? ($Global:WAUser has sysadmin access to the Database \ Blue Prism is installed and the Decipher License is applied?)" "Y"
+        $ReadytoWA = InputQuestion "Is Windows Authentication ready to be configured? ($Global:WAUser should have db_owner access to the newly created database)" "Y"
         if ($ReadytoWA -match "y")
             {
             DecipherWindowsAuthChanges $Global:WAUser $Global:WAPwordPlain    
@@ -935,7 +953,7 @@ if ($QPQ -match "D")
     }
 
     
-    
+# Interact Install procedure    
 
 if ($QPQ -match "I")
     {
@@ -989,7 +1007,7 @@ if ($QPQ -match "I")
 
     if ($Global:QWA -match "y")
         {
-        $ReadytoWA = InputQuestion "Is Windows Authentication ready to be configured? ($Global:WAUser has sysadmin access to the Database?)" "Y"
+        $ReadytoWA = InputQuestion "Is Windows Authentication ready to be configured? ($Global:WAUser should have db_owner access to the newly created databases)" "Y"
         if ($ReadytoWA -match "y")
             {
             InteractWindowsAuthChanges $Global:WAUser $Global:WAPwordPlain    
