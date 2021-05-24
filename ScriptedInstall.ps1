@@ -16,6 +16,7 @@
 # 
 # v 0.1 - Alpha Version!
 # v 0.2 - Based on customer experience, changed hub\interact msi names, corrected file check, tested temp directory with spaces, made interact services restart cos i forgot to do that, downloaded files are now checked for post-download
+# v 0.3 - Now all global variables are written to a file first, so that the script can be very easily restarted. Updated Decipher 1.2 and Interact 4.3 source file refs now they're out. 
 #
 # To do: 
 
@@ -53,16 +54,16 @@ $ChromeFile = "ChromeStandaloneSetup64.exe"
 $ChromeUrl = "https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7B9B042D81-4049-E06D-2587-CC2F8DC642F9%7D%26lang%3Den%26browser%3D3%26usagestats%3D0%26appname%3DGoogle%2520Chrome%26needsadmin%3Dprefers%26ap%3Dx64-stable-statsdef_1%26installdataindex%3Dempty/chrome/install/ChromeStandaloneSetup64.exe"
 $ChromeInstallMarker = "Google Chrome"
 
-$ErlangFile = "otp_win64_23.0.1.exe"
-$ErlangUrl = "https://github.com/erlang/otp/releases/download/OTP-23.0.1/otp_win64_23.0.1.exe"
-$ErlangInstallMarker = "Erlang OTP 23.0.1"
+$ErlangFile = "otp_win64_23.3.exe"
+$ErlangUrl = "https://github.com/erlang/otp/releases/download/OTP-23.3/otp_win64_23.3.exe"
+$ErlangInstallMarker = "Erlang OTP 23.3"
 
-$RMQFile = "rabbitmq-server-3.8.5.exe"
-$RMQurl = "https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.5/rabbitmq-server-3.8.5.exe"
-$RMQInstallMarker = "RabbitMQ Server 3.8.5"
+$RMQFile = "rabbitmq-server-3.8.16.exe"
+$RMQurl = "https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.16/rabbitmq-server-3.8.16.exe"
+$RMQInstallMarker = "RabbitMQ Server 3.8.16"
 
-$ErlangHome = "C:\Program Files\erl-23.0.1"
-$RMQsbin = "C:\Program Files\RabbitMQ Server\rabbitmq_server-3.8.5\sbin"
+$ErlangHome = "C:\Program Files\erl-23.3"
+$RMQsbin = "C:\Program Files\RabbitMQ Server\rabbitmq_server-3.8.16\sbin"
 
 $HubInstallFile = "BluePrismHub-4.3.msi"
 $HubInstallMarker = "Blue Prism Hub"
@@ -76,19 +77,19 @@ $bpccerts = "BluePrismCloud_Data_Protection", "BluePrismCloud_IMS_JWT"
 
 $InteractFilesarray = $HubInstallFile, $InteractInstallFile
 
-$DecipherServerInstallFile = "Decipher Server 1.221.03230.msi"
+$DecipherServerInstallFile = "Decipher Server 1.221.06150.msi"
 $DecipherServerInstallMarker = "Decipher Server"
 
 $DecipherServerPluginFile = "Decipher Server Plugin.msi"
 $DecipherServerPluginMarker = "Decipher Server Plugin"
 
-$DecipherLicensingServiceInstallFile = "Decipher Licensing Service.msi"
+$DecipherLicensingServiceInstallFile = "Decipher Licensing Service_0.msi"
 $DecipherLicensingServiceInstallMarker = "Decipher Licensing Service"
 
-$DecipherWebClientInstallFile = "Decipher Web Client 1.221.04120.msi"
+$DecipherWebClientInstallFile = "Decipher Web Client 1.221.06180.msi"
 $DecipherWebClientInstallMarker = "Decipher Web Client"
 
-$DecipherAutomantedClientInstallFile = "Decipher Automated Clients 1.220.12070.msi"
+$DecipherAutomantedClientInstallFile = "Decipher Automated Clients 1.220.06180_1.msi"
 $DecipherAutomantedClientInstallMarker = "Decipher Automated Clients"
 
 $DecipherFilesarray = $DecipherServerInstallFile, $DecipherServerPluginFile, $DecipherLicensingServiceInstallFile, $DecipherWebClientInstallFile, $DecipherAutomantedClientInstallFile
@@ -98,10 +99,12 @@ $DecipherPermsFolders = "C:\Program Files (x86)\Blue Prism", "C:\Windows\System3
 $HubWebsites = $env:computername, "authentication.hostname","hub.hostname","email.hostname","audit.hostname","file.hostname","signalr.hostname","notification.hostname","license.hostname"
 $InteractWebsites = $env:computername, "authentication.hostname","hub.hostname","email.hostname","audit.hostname","file.hostname","signalr.hostname","notification.hostname","license.hostname","interact.hostname","iada.hostname","interactremoteapi.hostname"
 
+$RestartScriptUrl = "https://raw.githubusercontent.com/BPMikeLawrence/ScriptedInstall/main/RestartInteract.ps1"
+$RestartScriptFile = "RestartInteract.ps1"
+
 $Global:WAUser = $Global:WAPword = $Global:WAPwordPlain = $Global:QSysadminCurrentUser = $Global:QChromeInstall = $Global:QPQ = $Global:InstalledList = $Global:SQLDownloadDir = $Global:DownloadDir = $Global:SQLPasswordPlain = $Global:QRMQCreds = $Global:RMQUSer = $Global:RMQPword = $Global:RMQPwordPlain = $Global:QCertFriendlyName = $Global:QHostSuffix = $null
 
 $Logfile = "C:\temp\ScriptedInstall.log"
-
 
 
 ### FUNCTIONS ###
@@ -117,15 +120,11 @@ Function WriteandLog ($string, $colour)
 
 function StartupQuestions
     {
-    Write-Host "`nPlease answer the following questions. Default answers (just hot Enter) are shown in like this -Y-`n`n" -ForegroundColor Magenta
-
-    $Global:DownloadDir = InputQuestion "Please specify a source files directory" "C:\temp"
-    $Global:SQLDownloadDir = "$Global:DownloadDir\SQLEXPR_2019"
-    $Global:InstalledList = "$Global:DownloadDir\InstalledSoftware.txt"
-
-    if (Test-Path -Path $Global:DownloadDir) 
+    
+    
+    if (Test-Path -Path $DownloadDir)
         {
-        Write-Host "Please ensure your Blue Prism installation files are present in $Global:DownloadDir" -ForegroundColor Yellow
+        Write-Host "Please ensure your Blue Prism installation files are present in $DownloadDir" -ForegroundColor Yellow
         } 
         else 
         {
@@ -134,71 +133,85 @@ function StartupQuestions
         }
         
     #$Global:QPQ = ProductQuestion "Are you installing Interact (I), Decipher (D) or Blue Prism V7 (B)?"
-    $Global:QPQ = ProductQuestion "Are you installing Interact (I), Decipher (D) (Blue Prism V7 coming soon)?"
-    
+    $QPQ = ProductQuestion "Are you installing Interact (I), Decipher (D) (Blue Prism V7 coming soon)?"
+    Set-Content -Path $inifile -Value "QPQ=$QPQ"
       
 # Check Interact install files exist, before we start    
-    if ($Global:QPQ -eq "I")
+    if ($QPQ -eq "I")
         {
-        foreach ($File in $InteractFilesarray)
+        foreach ($InstallFile in $InteractFilesarray)
         	{
-            if (-not (Test-Path -Path "$Global:DownloadDir\$File" -PathType Leaf))
+            if (-not (Test-Path -Path "$DownloadDir\$InstallFile" -PathType Leaf))
                 {
-                WriteandLog "Unable to find install file, $File. Please download and place in $Global:DownloadDir before retrying" Red
+                WriteandLog "Unable to find install file, $InstallFile. Please download and place in $DownloadDir before retrying" Red
                 exit
 	            } 
             }
         }
 
 # Check Decipher install files exist, before we start       
-    if ($Global:QPQ -eq "D")
+    if ($QPQ -eq "D")
         {
-        foreach ($File in $DecipherFilesarray)
+        foreach ($InstallFile in $DecipherFilesarray)
         	{
-            if (-not (Test-Path -Path "$Global:DownloadDir\$File" -PathType Leaf))
+            if (-not (Test-Path -Path "$DownloadDir\$InstallFile" -PathType Leaf))
                 {
-                WriteandLog "Unable to find install file, $File. Please download and place in $Global:DownloadDir before retrying" Red
+                WriteandLog "Unable to find install file, $InstallFile. Please download and place in $DownloadDir before retrying" Red
                 exit
 	            } 
             }
         }
 
-    $Global:QIISInstall = InputQuestion "Do you want IIS Installing?" "Y"
-    $Global:QSQLInstall = InputQuestion "Do you want SQL Express Installing?" "Y"
-    if ($Global:QSQLInstall -eq "Y")
+    $QIISInstall = InputQuestion "Do you want IIS Installing?" "Y"
+    Add-Content -Path $inifile -Value "QIISInstall=$QIISInstall"
+
+    $QSQLInstall = InputQuestion "Do you want SQL Express Installing?" "Y"
+    Add-Content -Path $inifile -Value "QSQLInstall=$QSQLInstall"
+    if ($QSQLInstall -eq "Y")
         {
         DefineSQLCreds
-        $Global:QSysadminCurrentUser = InputQuestion "Do you want to add the current logged on user as a DB sysadmin?" "Y"
+        $QSysadminCurrentUser = InputQuestion "Do you want to add the current logged on user as a DB sysadmin?" "Y"
+        Add-Content -Path $inifile -Value "QSysadminCurrentUser=$QSysadminCurrentUser"    
         }
     
-    $Global:QSSMSInstall = InputQuestion "Do you want SQL Server Management Studio Installing?" "Y"
+    $QSSMSInstall = InputQuestion "Do you want SQL Server Management Studio Installing?" "Y"
+    Add-Content -Path $inifile -Value "QSSMSInstall=$QSSMSInstall"
     
-    $Global:QChromeInstall = InputQuestion "Do you want Chrome Installing?" "Y"
+    $QChromeInstall = InputQuestion "Do you want Chrome Installing?" "Y"
+    Add-Content -Path $inifile -Value "QChromeInstall=$QChromeInstall"
     
-    $Global:QRMQInstall = InputQuestion "Do you want RabbitMQ Installing?" "Y"
-    if ($Global:QRMQInstall -eq "Y")
+    $QRMQInstall = InputQuestion "Do you want RabbitMQ Installing?" "Y"
+    Add-Content -Path $inifile -Value "QRMQInstall=$QRMQInstall"
+
+    if ($QRMQInstall -eq "Y")
         {
-        $Global:QRMQCreds = InputQuestion "Use standard guest\guest RMQ account? (Or use custom credentials?)" "Y"
-        if ($Global:QRMQCreds -ne "Y")
+        $QRMQCreds = InputQuestion "Use standard guest\guest RMQ account? (Or use custom credentials?)" "Y"
+        Add-Content -Path $inifile -Value "QRMQCreds=$QRMQCreds"
+        if ($QRMQCreds -ne "Y")
             {
             DefineRMQCreds
             }
         }
     
-    $Global:QWA = InputQuestion "Do you want use Windows Authentication? (The alterntive being everything running under the local system account)" "Y"
-    if ($Global:QWA -eq "Y")
+    $QWA = InputQuestion "Do you want use Windows Authentication? (The alterntive being everything running under the local system account)" "Y"
+    Add-Content -Path $inifile -Value "QWA=$QWA"
+    if ($QWA -eq "Y")
         {
-        DefineWACreds
+        Write-Host "Before continuing, ensure that this logged on user has syaadmin access to your database!!!" -ForegroundColor Red
+		DefineWACreds
         }
 
 
-    if ($Global:QPQ -ne "D")
+    if ($QPQ -ne "D")
         {
-        $Global:QRMQCerts = InputQuestion "Create a Self-Signed Certificate?" "Y"
-        if ($Global:QRMQCerts -eq "Y")
+        $QRMQCerts = InputQuestion "Create a Self-Signed Certificate?" "Y"
+        Add-Content -Path $inifile -Value "QRMQCerts=$QRMQCerts"
+        if ($QRMQCerts -eq "Y")
             {
-            $Global:QHostSuffix = InputQuestion "Choose a suffix for your web sites \ applications " ".local"
-            $Global:QCertFriendlyName = InputQuestion "Choose a Friendly Name for you Certificate" "MyBPCertificate"
+            $QHostSuffix = InputQuestion "Choose a suffix for your web sites \ applications " ".local"
+            Add-Content -Path $inifile -Value "QHostSuffix=$QHostSuffix"
+            $QCertFriendlyName = InputQuestion "Choose a Friendly Name for you Certificate" "MyBPCertificate"
+            Add-Content -Path $inifile -Value "QCertFriendlyName=$QCertFriendlyName"
             }
         }
     }
@@ -206,26 +219,32 @@ function StartupQuestions
 
 function DefineWACreds
     {
-    $Global:WAUser = Read-Host "Enter WA Account (in the format DOMAIN\USER (prefix .\ for a local account))"
-    $Global:WAPword = Read-Host -AsSecureString "Enter WA Password"
-    $Global:WAPwordPlain =[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($Global:WAPword))
+    $WAUser = Read-Host "Enter WA Account (in the format DOMAIN\USER (prefix .\ for a local account))"
+    Add-Content -Path $inifile -Value "WAUser=$WAUser"
+    $WAPword = Read-Host -AsSecureString "Enter WA Password"
+    Add-Content -Path $inifile -Value "WAPword=$WAPword"
+    $WAPwordPlain =[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($WAPword))
+    Add-Content -Path $inifile -Value "WAPwordPlain=$WAPwordPlain"
     $ShowPW = InputQuestion "Do you want to see your password to check it?" "N"
     if ($ShowPW -eq "Y")
         {
-        WriteandLog "Your WA password is : $Global:WAPwordPlain" Gray
+        WriteandLog "Your WA password is : $WAPwordPlain" Gray
         }
     }
 
 
 function DefineRMQCreds
     {
-    $Global:RMQUser = Read-Host "Enter RabbitMQ custom Username"
-    $Global:RMQPword = Read-Host -AsSecureString "Enter RabbitMQ custom Password"
-    $Global:RMQPwordPlain =[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($Global:RMQPword))
+    $RMQUser = Read-Host "Enter RabbitMQ custom Username"
+    Add-Content -Path $inifile -Value "RMQUser=$RMQUser"
+    $RMQPword = Read-Host -AsSecureString "Enter RabbitMQ custom Password"
+    Add-Content -Path $inifile -Value "RMQPword=$RMQPword"
+    $RMQPwordPlain =[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($RMQPword))
+    Add-Content -Path $inifile -Value "RMQPwordPlain=$RMQPwordPlain"
     $ShowPW = InputQuestion "Do you want to see your password to check it?" "N"
     if ($ShowPW -eq "Y")
         {
-        WriteandLog "Your RMQ password is : $Global:RMQPwordPlain" Gray
+        WriteandLog "Your RMQ password is : $RMQPwordPlain" Gray
         }
     }
 
@@ -233,12 +252,15 @@ function DefineRMQCreds
 function DefineSQLCreds
     {
     $SQLPassword = Read-Host -AsSecureString "Enter SQL sa account custom Password"
-    $Global:SQLPasswordPlain =[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($SQLPassword))
+    Add-Content -Path $inifile -Value "SQLPassword=$SQLPassword"
+    $SQLPasswordPlain =[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($SQLPassword))
+    Add-Content -Path $inifile -Value "SQLPasswordPlain=$SQLPasswordPlain"
     $ShowPW = InputQuestion "Do you want to see your password to check it?" "N"
     if ($ShowPW -eq "Y")
         {
-        WriteandLog "Your SQL password is : $Global:SQLPasswordPlain" Gray
+        WriteandLog "Your SQL password is : $SQLPasswordPlain" Gray
         }
+    Add-Content -Path $inifile -Value "SQLPassword=$SQLPassword"
     }
     
 
@@ -284,13 +306,13 @@ function CheckInstalled ($Software)
     }
 
 
-function CheckAndDownload($file, $url, $Global:DownloadDir)
+function CheckAndDownload($file, $url, $CheckDownloadDir)
     {
-    if (-not (Test-Path -Path "$Global:DownloadDir\$file" -PathType Leaf))
+    if (-not (Test-Path -Path "$CheckDownloadDir\$file" -PathType Leaf))
         {
         WriteandLog "Downloading $file" White
-        wget $url -outfile $Global:DownloadDir\$file
-        if (-not (Test-Path -Path "$Global:DownloadDir\$file" -PathType Leaf))
+        wget $url -outfile $CheckDownloadDir\$file
+        if (-not (Test-Path -Path "$CheckDownloadDir\$file" -PathType Leaf))
             {
             WriteandLog "Unable to download $file. Do you have access to the Internet?" Red
             exit
@@ -298,7 +320,7 @@ function CheckAndDownload($file, $url, $Global:DownloadDir)
         }
         else
         {
-        WriteandLog "$file already present in $Global:DownloadDir" Gray
+        WriteandLog "$file already present in $CheckDownloadDir" Gray
         }
     }
 
@@ -339,7 +361,7 @@ function InstallSQL
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $dl = CheckAndDownload $SQLConfigFileFile $SQLConfigFileUrl $Global:SQLDownloadDir
         (Get-Content -path $Global:SQLDownloadDir\$SQLConfigFileFile -Raw) -replace 'SQLPASSWORDPLACEHOLDER',$Global:SQLPasswordPlain | Set-Content -Path $Global:SQLDownloadDir\$SQLConfigFileFile
-               
+        
         WriteandLog "Silently Installing SQL" Magenta
         Start-process "Setup.exe" "/ConfigurationFile=$SQLConfigFileFile" -Wait:$true -Passthru
         }
@@ -354,24 +376,25 @@ function SysadminCurrentUser
     {
     WriteandLog "Adding logged on user to sysadmin" Green
     [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
-    $srv = new-object ('Microsoft.SqlServer.Management.Smo.Server') “$env:computername\SQLEXPRESS" 
+    $srv = new-object ('Microsoft.SqlServer.Management.Smo.Server') "$env:computername\SQLEXPRESS"
     
     $currentuser = whoami
     
     $srv.ConnectionContext.LoginSecure=$false;
     $srv.ConnectionContext.set_Login("sa");
     $srv.ConnectionContext.set_Password("$Global:SQLPasswordPlain") 
-    
+        
     $login = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Login -ArgumentList $srv, "$currentuser"
     $login.LoginType = "WindowsUser"
     $login.Create()
     $login.AddToRole("sysadmin")
-
+    
     WriteandLog "Adding NT AUTHORITY\SYSTEM to sysadmin" Green
     $login = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Login -ArgumentList $srv, "NT AUTHORITY\SYSTEM"
     $login.LoginType = "WindowsUser"
     $login.AddToRole("sysadmin")
     }
+
 
 
 function InstallSMSS
@@ -694,8 +717,6 @@ function DecipherWindowsAuthChanges ($WAUser, $WAPassword)
 function InteractPostInstallRestart
     {
     WriteandLog "Stopping all Services" Yellow
-    #$InteractServices = "Blue Prism - Audit Service Listener", "Blue Prism - Log Service", "Blue Prism - Submit Form Manager"
-
     foreach ($service in $InteractServices)
     	{
         echo $service
@@ -773,7 +794,39 @@ function DecipherPostInstallRestart
 WriteandLog "S T A R T I N G   N E W   I N S T A L L" White
 WriteandLog "=======================================" White
 
-StartupQuestions
+
+Write-Host "`nPlease answer the following questions. Default answers (just hot Enter) are shown in like this -Y-`n`n" -ForegroundColor Magenta
+
+$DownloadDir = InputQuestion "Please specify a source files directory" "C:\temp"
+$Global:inifile = "$DownloadDir\ScriptedInstall.ini"
+
+if (-not (Test-Path -Path "$Global:inifile" -PathType Leaf))
+    {
+    StartupQuestions
+    }
+    else
+    {
+    $UsePrevious = InputQuestion "$Global:inifile is present, and has the configuration from the last run. Do you want to use it?" "Y"
+    if ($UsePrevious -match "n")
+        {
+        StartupQuestions
+        }
+    }
+
+Add-Content -Path $inifile -Value "DownloadDir=$DownloadDir"
+
+$IniContent = Get-Content $Global:inifile
+
+    foreach ($line in $IniContent)
+        {
+    #    echo $line
+        $var = $line.Split('=')
+        New-Variable -Name $var[0] -Value $var[1] -Force -Scope Global
+        #Echo "setting $var[0] to $var[1]"
+        }
+
+$Global:SQLDownloadDir = "$Global:DownloadDir\SQLEXPR_2019"
+$Global:InstalledList = "$Global:DownloadDir\InstalledSoftware.txt"
 
 if ($QPQ -match "I")
     {
@@ -792,24 +845,34 @@ if ($QPQ -match "B")
     exit
     }
     
+if ($QIISInstall -match "y")
+    {
+    WriteandLog "IIS will be installed" Yellow
+    }
+    
 if ($QSQLInstall -match "y")
     {
     WriteandLog "SQL Express will be installed" Yellow
+    }
+
+if ($QSysadminCurrentUser -match "y")
+    {
+    WriteandLog "Current User will be added as SQL Express sysadmin" Yellow
     }
 
 if ($QSSMSInstall -match "y")
     {
     WriteandLog "SSMS will be installed" Yellow
     }
-    
-if ($Global:QRMQInstall -eq "Y")
-    {
-    WriteandLog "RabbitMQ will be installed" Yellow
-    }
 
 if ($Global:QChromeInstall -match "y")
     {
     WriteandLog "Chrome will be installed" Yellow
+    }
+    
+if ($Global:QRMQInstall -eq "Y")
+    {
+    WriteandLog "RabbitMQ will be installed" Yellow
     }
 
 if ($QRMQCreds -match "n")
@@ -1020,6 +1083,10 @@ if ($QPQ -match "I")
         }
     
     InteractShortcuts
+
+    $CurentUserDesktop = [Environment]::GetFolderPath("Desktop")
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    wget $RestartScriptUrl -outfile $CurentUserDesktop\$RestartScriptFile
 
 
     WriteandLog "Interact Installation completed!!!" Green
