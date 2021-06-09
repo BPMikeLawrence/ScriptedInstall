@@ -17,6 +17,7 @@
 # v 0.1 - Alpha Version!
 # v 0.2 - Based on customer experience, changed hub\interact msi names, corrected file check, tested temp directory with spaces, made interact services restart cos i forgot to do that, downloaded files are now checked for post-download
 # v 0.3 - Now all global variables are written to a file first, so that the script can be very easily restarted. Updated Decipher 1.2 and Interact 4.3 source file refs now they're out. 
+# v 0.4 - Option to use an alternative RabbitMQ Data Directory has been added.
 #
 # To do: 
 
@@ -120,8 +121,6 @@ Function WriteandLog ($string, $colour)
 
 function StartupQuestions
     {
-    
-    
     if (Test-Path -Path $DownloadDir)
         {
         Write-Host "Please ensure your Blue Prism installation files are present in $DownloadDir" -ForegroundColor Yellow
@@ -185,15 +184,21 @@ function StartupQuestions
 
     if ($QRMQInstall -eq "Y")
         {
-        $QRMQCreds = InputQuestion "Use standard guest\guest RMQ account? (Or use custom credentials?)" "Y"
+        $QRMQCreds = InputQuestion "Do you want to use the standard guest\guest RMQ account? (Or use custom credentials?)" "Y"
         Add-Content -Path $inifile -Value "QRMQCreds=$QRMQCreds"
         if ($QRMQCreds -ne "Y")
             {
             DefineRMQCreds
             }
+        $QRMQCustomDir = InputQuestion "Do you want to use the standard Data Directory $env:APPDATA\RabbitMQ? (Or define your own directory?)" "Y"
+        Add-Content -Path $inifile -Value "QRMQCustomDir=$QRMQCustomDir"
+        if ($QRMQCustomDir -ne "Y")
+            {
+            DefineRMQDataDir
+            }
         }
     
-    $QWA = InputQuestion "Do you want use Windows Authentication? (The alterntive being everything running under the local system account)" "Y"
+    $QWA = InputQuestion "Do you want use Windows Authentication? (The alternative being everything running under the local system account)" "Y"
     Add-Content -Path $inifile -Value "QWA=$QWA"
     if ($QWA -eq "Y")
         {
@@ -216,6 +221,11 @@ function StartupQuestions
         }
     }
 
+function DefineRMQDataDir
+    {
+    $RMQCustomDir = Read-Host "Enter RabbitMQ custom Data Directory path (in the standard windows format E.g. C:\Applications\RabbitMQ)"
+    Add-Content -Path $inifile -Value "RMQCustomDir=$RMQCustomDir"
+    }
 
 function DefineWACreds
     {
@@ -467,19 +477,55 @@ function InstallRMQ
     }
 
 
-function RMQConfig ($ErlangHome, $RMQsbin, $RMQCustomUser, $RMQCustomPword)
+function RMQConfig ($ErlangHome, $RMQsbin, $RMQCustomDir, $RMQCustomUser, $RMQCustomPword)
     {
+
+    if ($RMQCustomDir -like '*:\*') 
+        {
+        WriteandLog "RMQ config and database directory will be changed to $RMQCustomDir" Green
+        }
+        else
+        {
+        $RMQCustomUser = $RMQCustomDir
+        $RMQCustomPword = $RMQCustomUser
+        $RMQCustomDir = $null
+        }
+
     WriteandLog "Configuring RabbitMQ" Green
     set-location Env:
     New-Item -Path Env:\ERLANG_HOME -Value $ErlangHome
     ###get-childitem
     set-location $RMQsbin
-    .\rabbitmq-plugins enable rabbitmq_management
-    .\rabbitmqctl stop_app
-    .\rabbitmqctl start_app
 
-    if ($RMQCustomUser -ne $null)
+    if ($RMQCustomDir -ne $null)
         {
+        WriteandLog "Changing RMQ data directory to $RMQCustomDir" Green
+        echo $env:RABBITMQ_BASE
+        echo $env:ERLANG_HOME
+        New-Item -Path Env:\RABBITMQ_BASE -Value $RMQCustomDir
+        .\rabbitmq-service.bat remove
+        Stop-Process -Name "epmd" -Force
+        $RMQDataDir = "$env:APPDATA\RabbitMQ"
+        WriteandLog "Deleting current RMQ data directory, $RMQDataDir" Green
+        Remove-Item $RMQDataDir -Recurse
+        WriteandLog "Reinstalling RMQ service with new data directory" Green
+        .\rabbitmq-service.bat install
+        .\rabbitmq-service.bat start
+        .\rabbitmq-plugins enable rabbitmq_management
+        .\rabbitmqctl stop_app
+        .\rabbitmqctl start_app
+        Start-Sleep -s 5
+        }
+        else
+        {
+        .\rabbitmq-plugins enable rabbitmq_management
+        .\rabbitmqctl stop_app
+        .\rabbitmqctl start_app
+        }
+
+    if ($RMQCustomPword -ne $null)
+        {
+        WriteandLog "Adding and configuring new user, $RMQCustomUser" Green
         .\rabbitmqctl add_user $RMQCustomUser $RMQCustomPword
         .\rabbitmqctl set_user_tags $RMQCustomUser administrator
         .\rabbitmqctl set_permissions -p / $RMQCustomUser ".*" ".*" ".*"
@@ -568,7 +614,7 @@ function InteractShortcuts
     #CreateShortcut $SourceFileLocation $ShortcutName $ShortcutArguments 
     CreateShortcut "$env:SystemRoot\System32\inetsrv\InetMgr.exe" "IIS Manager.lnk"
     CreateShortcut "$env:SystemRoot\System32\services.msc" "Services.lnk"
-    CreateShortcut "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" "Interact.lnk" "https://authentication"
+    CreateShortcut "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" "Interact.lnk" "https://authentication$Global:QHostSuffix"
 
     CreateShortcut "C:\Program Files (x86)\Blue Prism\Audit Service\Logs_Audit" "Audit Service Logs.lnk"
     CreateShortcut "C:\Program Files (x86)\Blue Prism\Audit Service Listener\Logs_AuditQueueListener" "Audit Service Listener Logs.lnk"
@@ -794,7 +840,6 @@ function DecipherPostInstallRestart
 WriteandLog "S T A R T I N G   N E W   I N S T A L L" White
 WriteandLog "=======================================" White
 
-
 Write-Host "`nPlease answer the following questions. Default answers (just hot Enter) are shown in like this -Y-`n`n" -ForegroundColor Magenta
 
 $DownloadDir = InputQuestion "Please specify a source files directory" "C:\temp"
@@ -875,9 +920,14 @@ if ($Global:QRMQInstall -eq "Y")
     WriteandLog "RabbitMQ will be installed" Yellow
     }
 
-if ($QRMQCreds -match "n")
+if ($Global:QRMQCreds -match "n")
     {
     WriteandLog "Custom RMQ user, $Global:RMQUser will be created" Yellow
+    }
+
+if ($Global:QRMQCustomDir -match "n")
+    {
+    WriteandLog "Custom RMQ Data Directory, $Global:RMQCustomDir will be used" Yellow
     }
 
 if ($Global:QRMQCerts -match "y")
@@ -932,7 +982,7 @@ if ($QPQ -match "D")
         {
         InstallErlang
         InstallRMQ
-        RMQConfig $ErlangHome $RMQsbin $Global:RMQUser $Global:RMQPwordPlain
+        RMQConfig $ErlangHome $RMQsbin $Global:RMQCustomDir $Global:RMQUser $Global:RMQPwordPlain
         }
     if ($Global:QChromeInstall -match "y")
         {
@@ -1012,7 +1062,6 @@ if ($QPQ -match "D")
         {
         Start-process "C:\Program Files\Google\Chrome\Application\chrome.exe" "http://localhost:80"
         }
-
     }
 
     
@@ -1040,7 +1089,7 @@ if ($QPQ -match "I")
         {
         InstallErlang
         InstallRMQ
-        RMQConfig $ErlangHome $RMQsbin $Global:RMQUser $Global:RMQPwordPlain
+        RMQConfig $ErlangHome $RMQsbin $Global:RMQCustomDir $Global:RMQUser $Global:RMQPwordPlain
         }
     if ($Global:QRMQCerts -match "y")
         {
@@ -1087,11 +1136,9 @@ if ($QPQ -match "I")
     $CurentUserDesktop = [Environment]::GetFolderPath("Desktop")
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     wget $RestartScriptUrl -outfile $CurentUserDesktop\$RestartScriptFile
-
-
+    
     WriteandLog "Interact Installation completed!!!" Green
-
-
+    
     CheckInstalled $ChromeInstallMarker
     if ($Global:InstallCheck -ne $null)
         {
@@ -1099,3 +1146,5 @@ if ($QPQ -match "I")
         }
             
     }
+
+set-location $DownloadDir
