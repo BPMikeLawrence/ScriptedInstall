@@ -18,6 +18,7 @@
 # v 0.2 - Based on customer experience, changed hub\interact msi names, corrected file check, tested temp directory with spaces, made interact services restart cos i forgot to do that, downloaded files are now checked for post-download
 # v 0.3 - Now all global variables are written to a file first, so that the script can be very easily restarted. Updated Decipher 1.2 and Interact 4.3 source file refs now they're out. 
 # v 0.4 - Option to use an alternative RabbitMQ Data Directory has been added.
+# v 0.41 - Asks if you want to deletes the ini file after running.
 #
 # To do: 
 
@@ -103,7 +104,7 @@ $InteractWebsites = $env:computername, "authentication.hostname","hub.hostname",
 $RestartScriptUrl = "https://raw.githubusercontent.com/BPMikeLawrence/ScriptedInstall/main/RestartInteract.ps1"
 $RestartScriptFile = "RestartInteract.ps1"
 
-$Global:WAUser = $Global:WAPword = $Global:WAPwordPlain = $Global:QSysadminCurrentUser = $Global:QChromeInstall = $Global:QPQ = $Global:InstalledList = $Global:SQLDownloadDir = $Global:DownloadDir = $Global:SQLPasswordPlain = $Global:QRMQCreds = $Global:RMQUSer = $Global:RMQPword = $Global:RMQPwordPlain = $Global:QCertFriendlyName = $Global:QHostSuffix = $null
+$Global:QRMQCustomDir = $Global:WAUser = $Global:WAPword = $Global:WAPwordPlain = $Global:QSysadminCurrentUser = $Global:QChromeInstall = $Global:QPQ = $Global:InstalledList = $Global:SQLDownloadDir = $Global:DownloadDir = $Global:SQLPasswordPlain = $Global:QRMQCreds = $Global:RMQUSer = $Global:RMQPword = $Global:RMQPwordPlain = $Global:QCertFriendlyName = $Global:QHostSuffix = $null
 
 $Logfile = "C:\temp\ScriptedInstall.log"
 
@@ -1148,3 +1149,14 @@ if ($QPQ -match "I")
     }
 
 set-location $DownloadDir
+
+
+if ((Test-Path -Path "$Global:inifile" -PathType Leaf))
+    {
+    $IniFileCleanup = InputQuestion "If everything installed as expected, then shall we delete your ini file now? (it may contain passwords)" "Y"
+    if ($IniFileCleanup -match "y")
+        {
+        Remove-Item $Global:inifile
+        }
+    }
+    
