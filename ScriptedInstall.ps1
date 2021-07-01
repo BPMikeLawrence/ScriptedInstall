@@ -7,6 +7,8 @@
 # Only attempt with:
 #    Decipher 1.2+
 #    Interact 4.3+
+#    Internet Access
+#    Server OS 2016+    
 #
 # My first PowerShell script that's more than two lines. OO languages have always been my nemesis. 
 # Please be kind ;-)
