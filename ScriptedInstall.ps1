@@ -21,6 +21,7 @@
 # v 0.3 - Now all global variables are written to a file first, so that the script can be very easily restarted. Updated Decipher 1.2 and Interact 4.3 source file refs now they're out. 
 # v 0.4 - Option to use an alternative RabbitMQ Data Directory has been added.
 # v 0.41 - Asks if you want to deletes the ini file after running.
+# v 0.42 - Logfile is no longer hardcoded. 
 #
 # To do: 
 
@@ -81,19 +82,19 @@ $bpccerts = "BluePrismCloud_Data_Protection", "BluePrismCloud_IMS_JWT"
 
 $InteractFilesarray = $HubInstallFile, $InteractInstallFile
 
-$DecipherServerInstallFile = "Decipher Server 1.221.06150.msi"
+$DecipherServerInstallFile = "Decipher Server 1.221.03230.msi"
 $DecipherServerInstallMarker = "Decipher Server"
 
 $DecipherServerPluginFile = "Decipher Server Plugin.msi"
 $DecipherServerPluginMarker = "Decipher Server Plugin"
 
-$DecipherLicensingServiceInstallFile = "Decipher Licensing Service_0.msi"
+$DecipherLicensingServiceInstallFile = "Decipher Licensing Service.msi"
 $DecipherLicensingServiceInstallMarker = "Decipher Licensing Service"
 
-$DecipherWebClientInstallFile = "Decipher Web Client 1.221.06180.msi"
+$DecipherWebClientInstallFile = "Decipher Web Client 1.221.05130.msi"
 $DecipherWebClientInstallMarker = "Decipher Web Client"
 
-$DecipherAutomantedClientInstallFile = "Decipher Automated Clients 1.220.06180_1.msi"
+$DecipherAutomantedClientInstallFile = "Decipher Automated Clients 1.220.12070.msi"
 $DecipherAutomantedClientInstallMarker = "Decipher Automated Clients"
 
 $DecipherFilesarray = $DecipherServerInstallFile, $DecipherServerPluginFile, $DecipherLicensingServiceInstallFile, $DecipherWebClientInstallFile, $DecipherAutomantedClientInstallFile
@@ -107,9 +108,6 @@ $RestartScriptUrl = "https://raw.githubusercontent.com/BPMikeLawrence/ScriptedIn
 $RestartScriptFile = "RestartInteract.ps1"
 
 $Global:QRMQCustomDir = $Global:WAUser = $Global:WAPword = $Global:WAPwordPlain = $Global:QSysadminCurrentUser = $Global:QChromeInstall = $Global:QPQ = $Global:InstalledList = $Global:SQLDownloadDir = $Global:DownloadDir = $Global:SQLPasswordPlain = $Global:QRMQCreds = $Global:RMQUSer = $Global:RMQPword = $Global:RMQPwordPlain = $Global:QCertFriendlyName = $Global:QHostSuffix = $null
-
-$Logfile = "C:\temp\ScriptedInstall.log"
-
 
 ### FUNCTIONS ###
 
@@ -265,7 +263,7 @@ function DefineRMQCreds
 function DefineSQLCreds
     {
     $SQLPassword = Read-Host -AsSecureString "Enter SQL sa account custom Password"
-    Add-Content -Path $inifile -Value "SQLPassword=$SQLPassword"
+    #Add-Content -Path $inifile -Value "SQLPassword=$SQLPassword"
     $SQLPasswordPlain =[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($SQLPassword))
     Add-Content -Path $inifile -Value "SQLPasswordPlain=$SQLPasswordPlain"
     $ShowPW = InputQuestion "Do you want to see your password to check it?" "N"
@@ -273,7 +271,7 @@ function DefineSQLCreds
         {
         WriteandLog "Your SQL password is : $SQLPasswordPlain" Gray
         }
-    Add-Content -Path $inifile -Value "SQLPassword=$SQLPassword"
+    #Add-Content -Path $inifile -Value "SQLPassword=$SQLPassword"
     }
     
 
@@ -840,12 +838,15 @@ function DecipherPostInstallRestart
 
 ### END OF FUNCTIONS ###
 
-WriteandLog "S T A R T I N G   N E W   I N S T A L L" White
-WriteandLog "=======================================" White
-
 Write-Host "`nPlease answer the following questions. Default answers (just hot Enter) are shown in like this -Y-`n`n" -ForegroundColor Magenta
 
 $DownloadDir = InputQuestion "Please specify a source files directory" "C:\temp"
+
+$Logfile = "$DownloadDir\ScriptedInstall.log"
+
+WriteandLog "S T A R T I N G   N E W   I N S T A L L" White
+WriteandLog "=======================================" White
+
 $Global:inifile = "$DownloadDir\ScriptedInstall.ini"
 
 if (-not (Test-Path -Path "$Global:inifile" -PathType Leaf))
