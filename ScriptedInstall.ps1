@@ -22,6 +22,7 @@
 # v 0.4 - Option to use an alternative RabbitMQ Data Directory has been added.
 # v 0.41 - Asks if you want to deletes the ini file after running.
 # v 0.42 - Logfile is no longer hardcoded. 
+# v 0.43 - Updated to use RMQ 3.8.17
 #
 # To do: 
 
@@ -63,9 +64,9 @@ $ErlangFile = "otp_win64_23.3.exe"
 $ErlangUrl = "https://github.com/erlang/otp/releases/download/OTP-23.3/otp_win64_23.3.exe"
 $ErlangInstallMarker = "Erlang OTP 23.3"
 
-$RMQFile = "rabbitmq-server-3.8.16.exe"
-$RMQurl = "https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.16/rabbitmq-server-3.8.16.exe"
-$RMQInstallMarker = "RabbitMQ Server 3.8.16"
+$RMQFile = "rabbitmq-server-3.8.17.exe"
+$RMQurl = "https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.17/rabbitmq-server-3.8.17.exe"
+$RMQInstallMarker = "RabbitMQ Server 3.8.17"
 
 $ErlangHome = "C:\Program Files\erl-23.3"
 $RMQsbin = "C:\Program Files\RabbitMQ Server\rabbitmq_server-3.8.16\sbin"
