@@ -69,7 +69,7 @@ $RMQurl = "https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.17
 $RMQInstallMarker = "RabbitMQ Server 3.8.17"
 
 $ErlangHome = "C:\Program Files\erl-23.3"
-$RMQsbin = "C:\Program Files\RabbitMQ Server\rabbitmq_server-3.8.16\sbin"
+$RMQsbin = "C:\Program Files\RabbitMQ Server\rabbitmq_server-3.8.17\sbin"
 
 $HubInstallFile = "BluePrismHub-4.3.msi"
 $HubInstallMarker = "Blue Prism Hub"
