@@ -6,7 +6,7 @@
 #
 # Only attempt with:
 #    Decipher 1.2+
-#    Interact 4.3+
+#    Interact 4.4+
 #    Internet Access
 #    Server OS 2016+    
 #
@@ -23,24 +23,31 @@
 # v 0.41 - Asks if you want to deletes the ini file after running.
 # v 0.42 - Logfile is no longer hardcoded. 
 # v 0.43 - Updated to use RMQ 3.8.17
-#
+# v 0.5 - Updated to use Hub \ Interact 4.4
+# v 0.51 - .NetFWK links keep breaking \ changing... Updated.
 # To do: 
 
 $DecipherVersion = "1.2"
-$InteractVersion = "4.3"
+$InteractVersion = "4.4"
 $BluePrismVersion = "6.10.1"
 
 $DecipherServices = "DecipherAutoClientManager", "BluePrism.Decipher.LicensingService", "DecipherService", "DecipherWebSDKService"
 $InteractServices = "Blue Prism - Audit Service Listener", "Blue Prism - Log Service", "Blue Prism - Submit Form Manager"
 
-$NetFWKFile = "NDP472-KB4054531-Web.exe"
-$NetFWKUrl = "https://download.microsoft.com/download/0/5/C/05C1EC0E-D5EE-463B-BFE3-9311376A6809/NDP472-KB4054531-Web.exe"
+#$NetFWKFile = "NDP472-KB4054531-Web.exe"
+#$NetFWKUrl = "https://download.microsoft.com/download/0/5/C/05C1EC0E-D5EE-463B-BFE3-9311376A6809/NDP472-KB4054531-Web.exe"
+#Careful of below!
+#$NetFWKUrl = "https://dotnet.microsoft.com/download/dotnet-framework/thank-you/net472-web-installer"
 
-$DotNetHostingFile = "dotnet-hosting-3.1.3-win.exe"
-$DotNetHostingUrl = "https://download.visualstudio.microsoft.com/download/pr/ff658e5a-c017-4a63-9ffe-e53865963848/15875eef1f0b8e25974846e4a4518135/dotnet-hosting-3.1.3-win.exe"
+#It changed again, thanks Bill Gates
+$NetFWKFile = "ndp472-kb4054530-x86-x64-allos-enu.exe"
+$NetFWKUrl = "https://go.microsoft.com/fwlink/?LinkID=863265"
 
-$WindowsDesktopRuntimeFile = "windowsdesktop-runtime-3.1.3-win-x64.exe"
-$WindowsDesktopRuntimeURL = "https://download.visualstudio.microsoft.com/download/pr/5954c748-86a1-4823-9e7d-d35f6039317a/169e82cbf6fdeb678c5558c5d0a83834/windowsdesktop-runtime-3.1.3-win-x64.exe"
+$DotNetHostingFile = "dotnet-hosting-3.1.11-win.exe"
+$DotNetHostingUrl = "https://download.visualstudio.microsoft.com/download/pr/d8b046b7-c812-4200-905d-d2e0242be9d5/53d5698d79013be0232152ae1b43c86b/dotnet-hosting-3.1.11-win.exe"
+
+$WindowsDesktopRuntimeFile = "windowsdesktop-runtime-3.1.11-win-x64.exe"
+$WindowsDesktopRuntimeURL = "https://download.visualstudio.microsoft.com/download/pr/3f1cc4f7-0c1a-48ca-9551-a8447fa55892/ed9809822448f55b649858920afb35cb/windowsdesktop-runtime-3.1.11-win-x64.exe"
 
 $VCRedistFile = "vcredist_x64.exe"
 $VCRedistUrl = "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe"
@@ -71,10 +78,10 @@ $RMQInstallMarker = "RabbitMQ Server 3.8.17"
 $ErlangHome = "C:\Program Files\erl-23.3"
 $RMQsbin = "C:\Program Files\RabbitMQ Server\rabbitmq_server-3.8.17\sbin"
 
-$HubInstallFile = "BluePrismHub-4.3.msi"
+$HubInstallFile = "Blue Prism Hub.msi"
 $HubInstallMarker = "Blue Prism Hub"
 
-$InteractInstallFile = "BluePrismInteract-4.3.msi"
+$InteractInstallFile = "Blue Prism Interact.msi"
 $InteractInstallMarker = "Blue Prism Interact"
 
 $InteractPermsFolders = "C:\Program Files (x86)\Blue Prism"
