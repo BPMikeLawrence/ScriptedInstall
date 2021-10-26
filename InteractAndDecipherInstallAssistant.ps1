@@ -4,12 +4,15 @@ exit
 
 ### Interact install steps
 ### ----------------------
+### Install SQL Express (Optional if no database server)
+### Install SMSS (optional, but recommended)
 ### Install .NET FWK 4.7.2
 ### Install Blue Prism
 ### Install Prereqs
-###    .NET FWK 4.7.2
+###    .NET FWK 4.7.2 (if not done already)
 ###    3.1.11 Windows Hosting
 ###    3.1.11 Windows Desktop Runtime
+###    VCRedist
 ###    IIS
 ###    Erlang
 ###    RabbitMQ
@@ -30,37 +33,41 @@ exit
 
 ### Decipher install steps
 ### ----------------------
+### Install SQL Express (Optional if no database server)
+### Install SMSS (optional, but recommended)
 ### Install .NET FWK 4.7.2
 ### Install Blue Prism
+### Import Decipher Licence into BP DB
 ### Copy Decipher Dll to BP installation directory
-### Import Decipher release into BP
 ### Install Prereqs
-###    .NET FWK 4.7.2
+###    .NET FWK 4.7.2 (if not done already)
 ###    IIS
 ###    Erlang
 ###    RabbitMQ
 ###        Install management plugin
 ###        Create new RabbitMQ User
-### Install Licence Manager
+### Install Licence Service
 ### Install Decipher Server
-### Install Decipher Web Client 
-### Install Decipher Automated Client 
+### Install Decipher Web Client
+### Install Decipher Automated Client
 ### Install Decipher Server Plugin
-### Activate Decipher Website 
-### Do Windows Authentication if required
+### Activate Decipher Website, disable Default website
+### Do Windows Authentication (Services required)
 ###     Windows Services
 ###     Application Pool
+### Set ReprtingDB data sync
 ### Add Decipher SQL location to Web.config
 ### Enable machine learning training (optional)
 ### Reboot
 ### Test portal### Test Decipher
 
 ###### List of files to be downloaded from Blue Prism Portal, the cannot be downloaded through Powershell ######
+###### !!! Note correct as of Oct '21 but very likely to change in the future !!! ######
 
 ### Blue Prism V7.0
 ### https://portal.blueprism.com/system/files/2021-05/BluePrism7.0_x64_0.msi
 
-### Interact files to be copied to C:\temp
+### Interact 4.1.1 files to be copied to C:\temp
 ### From  here:
 ### https://portal.blueprism.com/node/72551
 ###    https://portal.blueprism.com/system/files/2021-10/BluePrismHub-4.4.1.msi
@@ -68,7 +75,7 @@ exit
 ###    https://portal.blueprism.com/system/files/2021-09/Interact-API-Service-v1.5.zip
 
 
-### Decipher files to be copied to C:\temp
+### Decipher 1.2 files to be copied to C:\temp
 ### From  here:
 ### https://portal.blueprism.com/node/72274
 ###    https://portal.blueprism.com/system/files/2021-05/BluePrism.Decipher.VBO_.Interop_0.zip
@@ -134,7 +141,7 @@ Start-process "C:\temp\dotnet-hosting-3.1.11-win.exe" "/Passive -wait" -Wait:$tr
 Start-process "C:\temp\windowsdesktop-runtime-3.1.11-win-x64.exe" "/Passive -wait" -Wait:$true -Passthru
 
 ### (Interact only)
-### Install VCRedistributables 
+### Install VCRedistributables
 Start-process "C:\temp\vcredist_x64.exe" "/Passive -wait" -Wait:$true -Passthru
 
 ### Install IIS
@@ -158,34 +165,102 @@ Start-process "C:\temp\SSMS-Setup-ENU.exe" "/Passive -wait" -Wait:$true -Passthr
 ### Install Chrome
 Start-process "C:\temp\ChromeStandaloneSetup64.exe" "/silent /install" -Wait:$true -Passthru
 
-### Add RabbitMQ Environment variables for a sensible app db directory
+### Add RabbitMQ Environment variables for a sensible RMQ AppDB directory
 [System.Environment]::SetEnvironmentVariable('RABBITMQ_BASE','C:\RabbitMQ',[System.EnvironmentVariableTarget]::Machine)
 [System.Environment]::SetEnvironmentVariable('RABBITMQ_LOGS','C:\RabbitMQ\RMQ.log',[System.EnvironmentVariableTarget]::Machine)
 
-### Install Erlang
+### Install Erlang - Into the default "C:\Program Files\erl-23.3" folder
 Start-Process "C:\temp\otp_win64_23.3.exe" "/S" -Wait:$true -Passthru
 
-### Install RabbitMQ
+### Install RabbitMQ - Into the default "C:\Program Files\RabbitMQ Server" folder
 ### Then enable the management console. Open the RMQ command line - rabbitmq-plugins enable rabbitmq_management
 ### Then create a new user - go to http://localhost:15672
 $proc = Start-Process "C:\temp\rabbitmq-server-3.8.17.exe" "/S" -Wait:$false -Passthru
 Wait-Process -Id $proc.Id
 
 ### (Interact only)
-### Create self-signed certificates - Substitute XXXXXXXX for your machine host name, and change the hostnames and Certificate friendly name to suit
-### Remember to copy to Trusted Root afterwards
-New-SelfSignedCertificate -CertStoreLocation Cert:\LocalMachine\My -DnsName XXXXXXXX,authentication.local,hub.local,email.local,audit.local,file.local,signalr.local,notification.local,license.local,interact.local,iada.local,interactremoteapi.local -FriendlyName "HubAndInteractCert" -NotAfter (Get-Date).AddYears(10)
+### Create self-signed certificates. Note not ideal for Production environments!!!
+### Substitute XXXXXXXX for your machine host name, and change the hostnames and Certificate friendly name to suit
+New-SelfSignedCertificate -CertStoreLocation Cert:\LocalMachine\My -DnsName XXXXXXXX,
+authentication.local,
+hub.local,
+email.local,
+audit.local,
+file.local,
+signalr.local,
+notification.local,
+license.local,
+interact.local,
+iada.local,
+interactremoteapi.local -FriendlyName "HubAndInteractCert" -NotAfter (Get-Date).AddYears(10)
+
+### (Interact only)
+### Copy the certificate to the Trusted Root store. Ensure the friendly name matches the previous certificate creation command
+$filehash = (Get-Childitem cert:\LocalMachine\My | Where-Object { $_.friendlyname -like "HubAndInteractCert" }).Thumbprint
+Export-Certificate -Cert (Get-Item Cert:\LocalMachine\My\$filehash) -FilePath C:\temp\mycert.cert
+Import-Certificate -CertStoreLocation Cert:\LocalMachine\Root -FilePath C:\temp\mycert.cert
+
 
 ######## End of Install commands section ########
 
+######## Start of configuration commands section ########
 
-### Handy code to do Application Pool identity changes
+
+### Handy code to do Interact Application Pool identity and Services Log on as changes - Change credentials to suit
+
+$User = "YourDomain\YourAccount"
+$Password = "YourPassword"
+
+$User = ".\InstallUser"
+$Password = "Password123!"
+$InteractServices = "Blue Prism - Audit Service Listener", "Blue Prism - Log Service", "Blue Prism - Submit Form Manager"
 Import-Module WebAdministration
 $pools = Get-ChildItem IIS:\AppPools | where { $_.name -Like  "Blue Prism - *"}
 foreach ($pool in $pools)
 	{
 	$pool.processmodel.identityType = 3
-	$pool.processmodel.username = "YourDomain\YourAccount"
-	$pool.processmodel.password = "YourPassword"
+	$pool.processmodel.username = $User
+	$pool.processmodel.password = $Password
+    Restart-WebAppPool -Name $pool.name
+    Start-WebAppPool -Name $pool.name
 	$pool | Set-Item
 	}
+foreach ($service in $InteractServices)
+    {
+    echo $service
+    $ServiceC = Get-WmiObject Win32_Service -Filter "Name='$service'"
+    $ServiceC.Change($null,$null,$null,$null,$null,$null,$User,$Password,$null,$null,$null)
+    Restart-Service -name $service
+    }
+
+
+### Handy code to do Decipher Application Pool identity and Services Log on as changes - Change credentials to suit
+$User = ".\InstallUser"
+$Password = "Password123!"
+$DecipherServices = "DecipherAutoClientManager", "BluePrism.Decipher.LicensingService", "DecipherService", "DecipherWebSDKService"
+Import-Module WebAdministration
+$pools = Get-ChildItem IIS:\AppPools | where { $_.name -Like  "Decipher*"}
+foreach ($pool in $pools)
+	{
+	$pool.processmodel.identityType = 3
+	$pool.processmodel.username = $User
+	$pool.processmodel.password = $Password
+	$pool | Set-Item
+    Restart-WebAppPool -Name $pool.name
+    Start-WebAppPool -Name $pool.name
+	}
+foreach ($service in $DecipherServices)
+    {
+    echo $service
+    $ServiceC = Get-WmiObject Win32_Service -Filter "Name='$service'"
+    $ServiceC.Change($null,$null,$null,$null,$null,$null,$User,$Password,$null,$null,$null)
+    Restart-Service -name $service
+    }
+
+
+### (Decipher only)
+### Commands to enable Reporting DB sync and ML 
+(Get-Content -path 'C:\Program Files (x86)\Blue Prism\Decipher Server\SsiServer.exe.config' -Raw) -replace '<add key="SyncOldDataToReportingDatabase" value="false" />','<add key="SyncOldDataToReportingDatabase" value="true" />' | Set-Content -Path 'C:\Program Files (x86)\Blue Prism\Decipher Server\SsiServer.exe.config'
+(Get-Content -path 'C:\Program Files (x86)\Blue Prism\Decipher Automated Clients\SsiDataCaptureClient.exe.config' -Raw) -replace '<add key="EnableModelTrainingML" value="false" />','<add key="EnableModelTrainingML" value="true" />' | Set-Content -Path 'C:\Program Files (x86)\Blue Prism\Decipher Automated Clients\SsiDataCaptureClient.exe.config'
+
+######## End of configuration commands section ########
