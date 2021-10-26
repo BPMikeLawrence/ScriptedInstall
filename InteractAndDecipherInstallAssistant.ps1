@@ -207,12 +207,10 @@ Import-Certificate -CertStoreLocation Cert:\LocalMachine\Root -FilePath C:\temp\
 
 
 ### Handy code to do Interact Application Pool identity and Services Log on as changes - Change credentials to suit
-
 $User = "YourDomain\YourAccount"
 $Password = "YourPassword"
-
-$User = ".\InstallUser"
-$Password = "Password123!"
+#$User = ".\InstallUser"
+#$Password = "Password123!"
 $InteractServices = "Blue Prism - Audit Service Listener", "Blue Prism - Log Service", "Blue Prism - Submit Form Manager"
 Import-Module WebAdministration
 $pools = Get-ChildItem IIS:\AppPools | where { $_.name -Like  "Blue Prism - *"}
@@ -235,8 +233,10 @@ foreach ($service in $InteractServices)
 
 
 ### Handy code to do Decipher Application Pool identity and Services Log on as changes - Change credentials to suit
-$User = ".\InstallUser"
-$Password = "Password123!"
+$User = "YourDomain\YourAccount"
+$Password = "YourPassword"
+#$User = ".\InstallUser"
+#$Password = "Password123!"
 $DecipherServices = "DecipherAutoClientManager", "BluePrism.Decipher.LicensingService", "DecipherService", "DecipherWebSDKService"
 Import-Module WebAdministration
 $pools = Get-ChildItem IIS:\AppPools | where { $_.name -Like  "Decipher*"}
