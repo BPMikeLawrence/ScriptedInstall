@@ -58,8 +58,8 @@ exit
 ### Set ReprtingDB data sync
 ### Add Decipher SQL location to Web.config
 ### Enable machine learning training (optional)
-### Reboot
-### Test portal### Test Decipher
+### Reboot### Test portal### Test Decipher
+
 
 ###### List of files to be downloaded from Blue Prism Portal, the cannot be downloaded through Powershell ######
 ###### !!! Note correct as of Oct '21 but very likely to change in the future !!! ######
