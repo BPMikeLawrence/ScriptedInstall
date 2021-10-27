@@ -129,7 +129,7 @@ wget https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F
 
 ######## Start of Install commands section ########
 
-### Install .NET Fwk 4.7.2
+### Install .NET Fwk 4.7.2 (May cause a reboot)
 Start-process "C:\temp\ndp472-kb4054530-x86-x64-allos-enu.exe" "/Passive -wait" -Wait:$true -Passthru
 
 ### (Interact only)
@@ -205,12 +205,10 @@ Import-Certificate -CertStoreLocation Cert:\LocalMachine\Root -FilePath C:\temp\
 
 ######## Start of configuration commands section ########
 
-
+### (Interact only)
 ### Handy code to do Interact Application Pool identity and Services Log on as changes - Change credentials to suit
 $User = "YourDomain\YourAccount"
 $Password = "YourPassword"
-#$User = ".\InstallUser"
-#$Password = "Password123!"
 $InteractServices = "Blue Prism - Audit Service Listener", "Blue Prism - Log Service", "Blue Prism - Submit Form Manager"
 Import-Module WebAdministration
 $pools = Get-ChildItem IIS:\AppPools | where { $_.name -Like  "Blue Prism - *"}
@@ -231,12 +229,28 @@ foreach ($service in $InteractServices)
     Restart-Service -name $service
     }
 
+### (Interact only)
+### Handy code to manage keys on the Interact certificates - Change credentials to suit
+$User = "YourDomain\YourAccount" # Note: For local users do not include a Domain prefix!
+$bpccerts = "BluePrismCloud_Data_Protection", "BluePrismCloud_IMS_JWT"
+foreach ($bpccert in $bpccerts)
+        {
+        $filehash = (Get-Childitem cert:\LocalMachine\My | Where-Object { $_.friendlyname -like $bpccert }).Thumbprint
+        $CertObj= Get-ChildItem Cert:\LocalMachine\my\$filehash
+        $rsaCert = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($CertObj)
+        $fileName = $rsaCert.key.UniqueName
+        $path = "$env:ALLUSERSPROFILE\Microsoft\Crypto\Keys\$fileName"
+        $permissions = Get-Acl -Path $path
+        $rule = new-object security.accesscontrol.filesystemaccessrule $User, "Full", allow
+        $permissions.AddAccessRule($rule)
+        Set-Acl -Path $path -AclObject $permissions
+        }
 
+
+### (Decipher only)
 ### Handy code to do Decipher Application Pool identity and Services Log on as changes - Change credentials to suit
 $User = "YourDomain\YourAccount"
 $Password = "YourPassword"
-#$User = ".\InstallUser"
-#$Password = "Password123!"
 $DecipherServices = "DecipherAutoClientManager", "BluePrism.Decipher.LicensingService", "DecipherService", "DecipherWebSDKService"
 Import-Module WebAdministration
 $pools = Get-ChildItem IIS:\AppPools | where { $_.name -Like  "Decipher*"}
